@@ -17,19 +17,16 @@ if __name__ == '__main__':
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 
+#location = pyautogui.locateOnScreen('buttons/x.png')
+#pyautogui.click(location)
 
-import pywinauto
+'''import pywinauto
 
 app = pywinauto.Application().connect(path='Gazillionaire.exe')
 game = app.Gazillionaire
 game.move_window(x=None, y=None, width=776, height=609)
 #Game window (Inc. Title Bar) - 760 * 600
 #Game window (Exc. Title Bar) - 760 * 570
-try:
-    location = pyautogui.locateOnScreen('planets/mira.png')
-    pyautogui.click(location)
-except:
-    pass
 
 x = ""
 while x != "quit":
@@ -46,4 +43,21 @@ while x != "quit":
         x = x.split(" ")
         x[0] = int(x[0])
         x[1] = int(x[1])
-        game.click_input(coords=(x[0], x[1]))
+        game.click_input(coords=(x[0], x[1]))'''
+
+from game_controller import *
+
+controller = MainMenu()
+controller.execute("travel")
+
+x = 0
+while x != "quit":
+    x = input(">>>")
+    if len(x) > 5 and x[:5] == "click":
+        x = x.split(" ")
+        x[1] = int(x[1])
+        x[2] = int(x[2])
+        GAME.click_input(coords=(x[1], x[2]))
+    else:
+        controller.process_command(x)
+    controller = controller.next_menu
