@@ -51,6 +51,7 @@ controller = MainMenu()
 
 x = 0
 while x != "quit":
+    print(controller)
     x = input(">>>")
     if len(x) > 5 and x[:5] == "click":
         x = x.split(" ")

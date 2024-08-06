@@ -25,7 +25,6 @@ class Menu:
             self.execute(command, args)
 
     def execute(self, command, args=[]):
-        print(command, "args:", args)
         if command == "x" or command == "close":
             self.close_pop_up()
         elif command == "screenshot":
@@ -158,6 +157,10 @@ class MainMenu(Menu):
                 GAME.click_input(coords=(500, 500))
                 self.next_menu = ExploreMenu()
 
+    def __str__(self):
+        return "Main Menu\nValid Commands:\njourney/travel/leave\nmarket\nsupply\nwarehouse\nstocks\nbank\nloan\nzinn" \
+               "\npick/passenger\nadvertise/advert/ad\npay <wages/crew/tax>\nbuy <insurance/fuel>\nexplore"
+
 
 class TwoButtonEventMenu(Menu):
     def __init__(self):
@@ -220,6 +223,9 @@ class BankMenu(BottomButtonMenu):
                     self.click_button(3)
                     self.money_menu(args[0])
 
+    def __str__(self):
+        return "Bank Menu\nValid Commands:\ndeposit <amount/max>\nwithdraw <amount/max>\nback"
+
 
 class LoanMenu(BottomButtonMenu):
     def __init__(self):
@@ -244,6 +250,9 @@ class LoanMenu(BottomButtonMenu):
                     self.click_button(3)
                     self.money_menu(args[0])
 
+    def __str__(self):
+        return "Trader's Union Menu\nValid Commands:\npay <amount/max>\nborrow <amount/max>"
+
 
 class ZinnMenu(BottomButtonMenu):
     def __init__(self):
@@ -261,6 +270,9 @@ class ZinnMenu(BottomButtonMenu):
                 else:
                     self.click_button(1)
                     self.money_menu(args[0])
+
+    def __str__(self):
+        return "Zinn's Menu\nValid Commands:\npay <amount/max>\nback"
 
 
 class StocksMenu(BottomButtonMenu):
@@ -299,6 +311,9 @@ class StocksMenu(BottomButtonMenu):
         else:
             GAME.click_input(coords=(390, 450))
 
+    def __str__(self):
+        return "Stock Market Menu\nValid Commands:\nbuy <amount/max>\nsell <amount/max>\nshow shares\nback"
+
 
 class PassengerMenu(BottomButtonMenu):
     ycoord = 550
@@ -330,6 +345,9 @@ class PassengerMenu(BottomButtonMenu):
         GAME.click_input(coords=(380, 400))
         return not self.close_pop_up()
 
+    def __str__(self):
+        return "Passengers Menu\nValid Commands:\nset price <amount/max>\nback"
+
 
 class AdvertMenu(TwoButtonEventMenu):
     def __init__(self):
@@ -360,6 +378,9 @@ class AdvertMenu(TwoButtonEventMenu):
                 pass
             self.execute("right")
 
+    def __str__(self):
+        return "Advert Menu\nValid Commands:\npassenger <0-6>\ncommodity <0-6>\nplace\nback"
+
 
 class ExploreMenu(BottomButtonMenu):
     def __init__(self):
@@ -382,6 +403,9 @@ class ExploreMenu(BottomButtonMenu):
             sleep(5)
             TwoButtonEventMenu().execute("left")
 
+    def __str__(self):
+        return "Explore Menu\nValid Commands:\nspecial\nweather\nnews"
+
 
 class SpecialMenu(TwoButtonEventMenu):
     tilo = False
@@ -394,7 +418,6 @@ class SpecialMenu(TwoButtonEventMenu):
         self.commands.remove("no")
         try:
             locateOnScreen('ui_imgs/tilo_special.png')
-            print("Tilo!")
             self.tilo = True
             self.commands.remove("special")
             self.commands = self.commands + ["gamble"]
@@ -402,10 +425,8 @@ class SpecialMenu(TwoButtonEventMenu):
             self.tilo = False
 
     def execute(self, command, args=[]):
-        print(self.commands)
         super().execute(command, args)
         if self.gambling:
-            print("gambling")
             if command == "yes":
                 GAME.click_input(coords=(350, 420))
             elif command == "no":
@@ -453,6 +474,14 @@ class SpecialMenu(TwoButtonEventMenu):
                 pass
         GAME.click_input(coords=(400, 400))
 
+    def __str__(self):
+        if self.gambling:
+            return "Special Menu\nValid Commands:\nyes\nno"
+        elif self.tilo:
+            return "Special Menu\nValid Commands:\ngamble <amount/max>\nback"
+        else:
+            return "Special Menu\nValid Commands:\nspecial\nback"
+
 
 class TravelMenu(BottomButtonMenu):
     PLANETS = []
@@ -495,7 +524,7 @@ class TravelMenu(BottomButtonMenu):
             bank.execute("back")
             main.execute("journey")
             # sleep to ensure the menu is actually open
-            sleep(1)
+            sleep(0.3)
             # now we're back on the travel menu, actually go to the planet
             planet_location = locateOnScreen('ui_imgs/planets/' + command + '.png')
             click(planet_location)
@@ -503,6 +532,12 @@ class TravelMenu(BottomButtonMenu):
             if not self.close_pop_up():
                 # TODO: this should be none for the main script to handle, but err, there is not main script.
                 self.next_menu = main
+
+    def __str__(self):
+        return_string = "Travel Menu\nValid Commands:\ndistance\nfacilities"
+        for planet in TravelMenu.PLANETS:
+            return_string += planet + "\n"
+        return return_string + "back"
 
 
 class FacilitiesMenu(BottomButtonMenu):
@@ -526,8 +561,11 @@ class FacilitiesMenu(BottomButtonMenu):
                 args[0] = int(args[0])
             except ValueError:
                 args[0] = 1
-            click_y = Menu.btn_location(menu_start, menu_end, buffer, 7, args[0])
+            click_y = Menu.btn_location(menu_start, menu_end, buffer, 7, args[0] - 1)
             GAME.click_input(coords=(100, click_y))
+
+    def __str__(self):
+        return "Facilities & Distance Menu\nValid Commands:\nfacilities\ndistance\nplanet <1-7>\nback"
 
 
 class ShopMenu(BottomButtonMenu):
@@ -611,8 +649,12 @@ class SupplyMenu(ShopMenu):
                 self.click_right_button(2)
         elif command == "mark" and len(args) > 0:
             if args[0].isdigit():
-                xcoord = Menu.btn_location(220, 550, 10, 6, int(args[0]) - 1)
+                xcoord = Menu.btn_location(220, 550, 20, 6, int(args[0]) - 1)
                 GAME.click_input(coords=(xcoord, 100))
+
+    def __str__(self):
+        return "Supply Menu\nValid Commands:\nmarket/marketplace\nwarehouse\nshow <available/cargo/all>\nmark " \
+               "<1-6>\nback"
 
 
 class MarketMenu(ShopMenu):
@@ -642,6 +684,10 @@ class MarketMenu(ShopMenu):
                 self.manage_resource(True, args)
             elif command == "sell":
                 self.manage_resource(False, args)
+
+    def __str__(self):
+        return "Marketplace Menu\nValid Commands:\nsupply\nwarehouse\nshow <available/cargo/all>\nbuy <resource> " \
+               "<amount/max>\nsell <resource> <amount/max>\nback"
 
 
 class WarehouseMenu(ShopMenu):
@@ -678,3 +724,7 @@ class WarehouseMenu(ShopMenu):
                 self.manage_resource(True, args)
             elif command == "take":
                 self.manage_resource(False, args)
+
+    def __str__(self):
+        return "Warehouse Menu\nValid Commands:\nsupply\nmarket/marketplace\nshow <available/cargo/all>\nstore " \
+               "<resource> <amount/max>\ntake <resource> <amount/max>\nback"
