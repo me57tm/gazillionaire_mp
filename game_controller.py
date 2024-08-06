@@ -1,5 +1,5 @@
 from pywinauto import Application, keyboard
-from pyautogui import locateOnScreen, click
+from pyautogui import locateOnScreen, click, ImageNotFoundException
 from time import time, sleep
 
 app = Application().connect(path='Gazillionaire.exe')
@@ -31,7 +31,14 @@ class Menu:
         elif command == "screenshot":
             GAME.capture_as_image().save('screenshots/Gazillionaire' + str(int(time())) + '.png')
 
-    def close_pop_up(self):
+    @staticmethod
+    def btn_location(menu_start, menu_end, buffer, total_buttons, button_number):
+        if button_number >= total_buttons:
+            raise IndexError
+        return menu_start + buffer + button_number * ((menu_end - menu_start) // total_buttons)
+
+    @staticmethod
+    def close_pop_up():
         try:
             xbuttoncoords = locateOnScreen('ui_imgs/x.png')
             click(xbuttoncoords)
@@ -80,11 +87,13 @@ class MainMenu(Menu):
         match command:
             case "marketplace" | "market":
                 GAME.click_input(coords=(350, 150))
-                self.next_menu = BottomButtonMenu(3)
+                self.next_menu = MarketMenu()
             case "supply":
                 GAME.click_input(coords=(500, 150))
+                self.next_menu = SupplyMenu()
             case "warehouse":
                 GAME.click_input(coords=(600, 150))
+                self.next_menu = WarehouseMenu()
             case "journey" | "travel" | "leave":
                 GAME.click_input(coords=(150, 150))
                 self.next_menu = TravelMenu()
@@ -178,15 +187,16 @@ class BottomButtonMenu(Menu):
     def execute(self, command, args=[]):
         super().execute(command, args)
         if command == "back":
+            Menu.close_pop_up()
             self.click_button(0)
             self.next_menu = MainMenu()
 
     def click_button(self, number):
         buttons_start = 24
         buttons_end = 696
-        buttons_width = buttons_end - buttons_start
         spacer = 50
-        GAME.click_input(coords=(buttons_start + spacer + number * (buttons_width // self.num_buttons), self.ycoord))
+        GAME.click_input(coords=(
+            Menu.btn_location(buttons_start, buttons_end, spacer, self.num_buttons, number), self.ycoord))
 
 
 class BankMenu(BottomButtonMenu):
@@ -324,13 +334,16 @@ class PassengerMenu(BottomButtonMenu):
 class AdvertMenu(TwoButtonEventMenu):
     def __init__(self):
         super().__init__()
-        self.commands = self.commands + ["passenger", "commodity", "back"]
+        self.commands = self.commands + ["passenger", "commodity", "place", "back"]
 
     def execute(self, command, args=[]):
         super().execute(command)
         if command == "back":
+            self.close_pop_up()
             self.execute("left")
             self.next_menu = MainMenu()
+        elif command == "place":
+            self.execute("right")
         elif len(args) > 0:
             if command == "passenger":
                 GAME.click_input(coords=(150, 100))
@@ -373,6 +386,7 @@ class ExploreMenu(BottomButtonMenu):
 class SpecialMenu(TwoButtonEventMenu):
     tilo = False
     gambling = False
+
     def __init__(self):
         super().__init__()
         self.commands = self.commands + ["back", "special"]
@@ -406,6 +420,7 @@ class SpecialMenu(TwoButtonEventMenu):
                 self.execute("left")
         else:
             if command == "back":
+                Menu.close_pop_up()
                 self.execute("left")
                 self.next_menu = ExploreMenu()
             elif command == "special":
@@ -421,7 +436,7 @@ class SpecialMenu(TwoButtonEventMenu):
                     self.gambling = True
                     self.commands.remove("gamble")
                     self.commands.remove("back")
-                    self.commands = self.commands + ["yes","no"]
+                    self.commands = self.commands + ["yes", "no"]
                 except:
                     sleep(3)
                     self.next_menu = ExploreMenu()
@@ -438,18 +453,21 @@ class SpecialMenu(TwoButtonEventMenu):
                 pass
         GAME.click_input(coords=(400, 400))
 
+
 class TravelMenu(BottomButtonMenu):
     PLANETS = []
+
     def __init__(self):
         super().__init__(3)
         if TravelMenu.PLANETS == []:
             print("Finding planets...")
             i = 0
-            for planet in ["bass", "frac", "hork", "loro", "mira", "nosh", "ooom", "pyke", "queg", "stye", "tilo", "vexx", "xeen", "zile"]:
+            for planet in ["bass", "frac", "hork", "loro", "mira", "nosh", "ooom", "pyke", "queg", "stye", "tilo",
+                           "vexx", "xeen", "zile"]:
                 if i == 7:
                     break
                 try:
-                    locateOnScreen('ui_imgs/planets/'+ planet + '.png')
+                    locateOnScreen('ui_imgs/planets/' + planet + '.png')
                     TravelMenu.PLANETS.append(planet)
                     i += 1
                 except:
@@ -462,9 +480,201 @@ class TravelMenu(BottomButtonMenu):
     def execute(self, command, args=[]):
         super().execute(command)
         if command == "distance":
-            pass
+            self.click_button(1)
+            self.next_menu = FacilitiesMenu()
         elif command == "facilities":
-            pass
+            self.click_button(2)
+            self.next_menu = FacilitiesMenu()
         elif command in TravelMenu.PLANETS:
+            # Deposit our cash to gain interest.
+            self.execute("back")
+            main = MainMenu()
+            bank = BankMenu()
+            main.execute("bank")
+            bank.execute("deposit", ["max"])
+            bank.execute("back")
+            main.execute("journey")
+            # sleep to ensure the menu is actually open
+            sleep(1)
+            # now we're back on the travel menu, actually go to the planet
             planet_location = locateOnScreen('ui_imgs/planets/' + command + '.png')
             click(planet_location)
+            sleep(1)
+            if not self.close_pop_up():
+                # TODO: this should be none for the main script to handle, but err, there is not main script.
+                self.next_menu = main
+
+
+class FacilitiesMenu(BottomButtonMenu):
+    def __init__(self):
+        super().__init__(3)
+        self.commands += ["planet", "distance", "facilities"]
+
+    def execute(self, command, args=[]):
+        super().execute(command)
+        if command == "back":
+            self.next_menu = TravelMenu()
+        elif command == "distance":
+            self.click_button(1)
+        elif command == "facilities":
+            self.click_button(2)
+        elif command == "planet" and len(args) > 0:
+            menu_start = 41
+            menu_end = 530
+            buffer = 50
+            try:
+                args[0] = int(args[0])
+            except ValueError:
+                args[0] = 1
+            click_y = Menu.btn_location(menu_start, menu_end, buffer, 7, args[0])
+            GAME.click_input(coords=(100, click_y))
+
+
+class ShopMenu(BottomButtonMenu):
+    right_menu_start = 230
+    right_menu_buffer = 30
+    right_menu_end = 500
+    right_menu_amount = 3
+    resources = ["cantaloupe", "jelly beans", "moon ferns", "frog legs", "whip cream", "babel seeds", "diapers",
+                 "umbrellas", "toasters", "hair tonic", "polyester", "lava lamps", "oxygen", "oggle sand",
+                 "kryptoons", "x fuels", "gems", "exotic"]
+
+    def __init__(self):
+        super().__init__(3)
+        self.commands = self.commands + ["market", "marketplace", "show", "supply", "warehouse"]
+
+    def click_right_button(self, number):
+        ycoord = Menu.btn_location(self.right_menu_start,
+                                   self.right_menu_end,
+                                   self.right_menu_buffer,
+                                   self.right_menu_amount,
+                                   number)
+        GAME.click_input(coords=(675, ycoord))
+
+    def manage_resource(self, top_button, args):
+        if not (args[-1].isdigit() or args[-1] in ["max", "all"]):
+            args.append("max")
+        if len(args) < 2:
+            return
+        if len(args) == 3:
+            # Combine multi-word resources back into 1 element
+            args[0] = args[0] + " " + args[1]
+            args[1] = args[2]
+        if args[0] in ShopMenu.resources and (args[1].isdigit() or args[1] in ["max", "all"]):
+            # If the request is valid
+            # open available / cargo menu depending on buy / sell
+            if top_button:
+                self.click_right_button(2)
+            else:
+                self.click_right_button(3)
+            # Attempt to click on the resource, this will fail if it is already selected as the bold text is
+            # not detected. If that happens, click on the "show all" menu to unbold every resource
+            try:
+                item = locateOnScreen("ui_imgs/marketplace/" + args[0] + ".png")
+                click(item)
+            except ImageNotFoundException:
+                self.click_right_button(4)
+                try:
+                    item = locateOnScreen("ui_imgs/marketplace/" + args[0] + ".png")
+                    click(item)
+                except ImageNotFoundException:
+                    pass
+            # Click the 'action' button and open the money menu
+            if top_button:
+                self.click_right_button(0)
+            else:
+                self.click_right_button(1)
+            self.money_menu(args[1])
+            # This includes a call to close any menus that may have opened due to a failure
+
+
+class SupplyMenu(ShopMenu):
+    def __init__(self):
+        super().__init__()
+        self.commands.remove("supply")
+        self.commands.append("mark")
+
+    def execute(self, command, args=[]):
+        super().execute(command, args)
+        if command == "market" or command == "marketplace":
+            self.click_button(1)
+            self.next_menu = MarketMenu()
+        elif command == "warehouse":
+            self.click_button(2)
+            self.next_menu = WarehouseMenu()
+        elif command == "show" and len(args) > 0:
+            if args[0] == "available":
+                self.click_right_button(0)
+            elif args[0] == "cargo":
+                self.click_right_button(1)
+            elif args[0] == "all":
+                self.click_right_button(2)
+        elif command == "mark" and len(args) > 0:
+            if args[0].isdigit():
+                xcoord = Menu.btn_location(220, 550, 10, 6, int(args[0]) - 1)
+                GAME.click_input(coords=(xcoord, 100))
+
+
+class MarketMenu(ShopMenu):
+    right_menu_amount = 5
+
+    def __init__(self):
+        super().__init__()
+        self.commands = self.commands[2:] + ["buy", "sell"]
+
+    def execute(self, command, args=[]):
+        super().execute(command, args)
+        if command == "supply":
+            self.click_button(1)
+            self.next_menu = SupplyMenu()
+        elif command == "warehouse":
+            self.click_button(2)
+            self.next_menu = WarehouseMenu()
+        if len(args) > 0:
+            if command == "show":
+                if args[0] == "available":
+                    self.click_right_button(2)
+                elif args[0] == "cargo":
+                    self.click_right_button(3)
+                elif args[0] == "all":
+                    self.click_right_button(4)
+            elif command == "buy":
+                self.manage_resource(True, args)
+            elif command == "sell":
+                self.manage_resource(False, args)
+
+
+class WarehouseMenu(ShopMenu):
+    right_menu_start = 84
+    right_menu_end = 530
+    right_menu_amount = 6
+
+    def __init__(self):
+        super().__init__()
+        self.commands.remove("warehouse")
+        self.commands = self.commands + ["store", "take", "other"]
+
+    def execute(self, command, args=[]):
+        super().execute(command, args)
+        if command == "supply":
+            self.click_button(1)
+            self.next_menu = SupplyMenu()
+        elif command == "marketplace":
+            self.click_button(2)
+            self.next_menu = MarketMenu()
+        elif command == "other":
+            self.click_right_button(5)
+            sleep(3)
+            Menu.close_pop_up()
+        elif len(args) > 0:
+            if command == "show":
+                if args[0] == "available":
+                    self.click_right_button(2)
+                elif args[0] == "cargo":
+                    self.click_right_button(3)
+                elif args[0] == "all":
+                    self.click_right_button(4)
+            elif command == "store":
+                self.manage_resource(True, args)
+            elif command == "take":
+                self.manage_resource(False, args)

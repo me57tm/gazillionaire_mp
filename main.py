@@ -48,7 +48,6 @@ while x != "quit":
 from game_controller import *
 
 controller = MainMenu()
-controller.execute("travel")
 
 x = 0
 while x != "quit":
