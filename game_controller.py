@@ -1,8 +1,14 @@
 from pywinauto import Application, keyboard
-from pyautogui import locateOnScreen, click, ImageNotFoundException
+from pyautogui import locateOnScreen, ImageNotFoundException, click
+#from pydirectinput import click
 from time import time, sleep
-
-app = Application().connect(path='Gazillionaire.exe')
+app = None
+while app is None:
+    try:
+        app = Application().connect(path='Gazillionaire.exe')
+    except:
+        print("Could not find game, please open it!")
+        sleep(5)
 GAME = app.Gazillionaire.wait('ready')
 GAME.move_window(x=None, y=None, width=776, height=609)
 
@@ -15,16 +21,17 @@ class Menu:
     def __init__(self):
         self.next_menu = self
 
-    def process_command(self, command):
+    def run(self, command):
         command_parts = command.split(" ")
         command = command_parts[0]
         args = []
         if command in self.commands:
             if len(command_parts) > 1:
                 args = command_parts[1:]
-            self.execute(command, args)
+            self._execute(command, args)
 
-    def execute(self, command, args=[]):
+    # It is recommended to use the pre-processing command loop to call execute rather than calling execute directly
+    def _execute(self, command, args=[]):
         if command == "x" or command == "close":
             self.close_pop_up()
         elif command == "screenshot":
@@ -32,7 +39,7 @@ class Menu:
 
     @staticmethod
     def btn_location(menu_start, menu_end, buffer, total_buttons, button_number):
-        if button_number >= total_buttons:
+        if button_number >= total_buttons or button_number < 0:
             raise IndexError
         return menu_start + buffer + button_number * ((menu_end - menu_start) // total_buttons)
 
@@ -42,8 +49,13 @@ class Menu:
             xbuttoncoords = locateOnScreen('ui_imgs/x.png')
             click(xbuttoncoords)
             success = True
-        except:
-            success = False
+        except ImageNotFoundException:
+            try:
+                xbuttoncoords = locateOnScreen('ui_imgs/inverted_x.png')
+                click(xbuttoncoords)
+                success = True
+            except ImageNotFoundException:
+                success = False
         return success
 
     def money_menu(self, amount):
@@ -81,8 +93,8 @@ class MainMenu(Menu):
             "journey", "travel", "leave",
         ]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         match command:
             case "marketplace" | "market":
                 GAME.click_input(coords=(350, 150))
@@ -123,9 +135,9 @@ class MainMenu(Menu):
                     if args[0] == "crew" or args[0] == "wages":
                         GAME.click_input(coords=(500, 350))
                         crew_menu = TwoButtonEventMenu()
-                        crew_menu.execute("right")
+                        crew_menu.run("right")
                         self.close_pop_up()
-                        crew_menu.execute("left")
+                        crew_menu.run("left")
                     elif args[0] == "tax" or args[0] == "taxes":
                         GAME.click_input(coords=(500, 400))
                         GAME.click_input(coords=(450, 530))
@@ -136,9 +148,9 @@ class MainMenu(Menu):
                     if args[0] == "insurance":
                         GAME.click_input(coords=(500, 450))
                         insurance_menu = TwoButtonEventMenu()
-                        insurance_menu.execute("right")
+                        insurance_menu.run("right")
                         self.close_pop_up()
-                        insurance_menu.execute("left")
+                        insurance_menu.run("left")
                     elif args[0] == "fuel":
                         # Open Menu
                         GAME.click_input(coords=(720, 100))
@@ -170,8 +182,8 @@ class TwoButtonEventMenu(Menu):
             "no", "right"
         ]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if command == "yes" or command == "left":
             GAME.click_input(coords=(480, 525))
         elif command == "no" or command == "right":
@@ -187,10 +199,10 @@ class BottomButtonMenu(Menu):
         self.num_buttons = num_buttons
         self.commands = self.commands + ["back"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if command == "back":
-            Menu.close_pop_up()
+            self.close_pop_up()
             self.click_button(0)
             self.next_menu = MainMenu()
 
@@ -207,8 +219,8 @@ class BankMenu(BottomButtonMenu):
         super().__init__(5)
         self.commands = self.commands + ["deposit", "withdraw"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if len(args) > 0:
             if command == "deposit":
                 if args[0] == "max":
@@ -232,8 +244,8 @@ class LoanMenu(BottomButtonMenu):
         super().__init__(5)
         self.commands = self.commands + ["pay", "borrow"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if len(args) > 0:
             if command == "pay":
                 if args[0] == "back" and len(args) > 1:
@@ -259,8 +271,8 @@ class ZinnMenu(BottomButtonMenu):
         super().__init__(3)
         self.commands = self.commands + ["pay"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if len(args) > 0:
             if command == "pay":
                 if args[0] == "back" and len(args) > 1:
@@ -280,8 +292,8 @@ class StocksMenu(BottomButtonMenu):
         super().__init__(6)
         self.commands = self.commands + ["buy", "sell", "show"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if len(args) > 0:
             if command == "buy":
                 self.click_button(1)
@@ -322,8 +334,8 @@ class PassengerMenu(BottomButtonMenu):
         super().__init__(3)
         self.commands = self.commands + ["set"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if len(args) > 0 and command == "set":
             if args[0] == "ticket" or args[0] == "price" and len(args) > 1:
                 if args[1] == "price" and len(args) > 2:
@@ -354,14 +366,14 @@ class AdvertMenu(TwoButtonEventMenu):
         super().__init__()
         self.commands = self.commands + ["passenger", "commodity", "place", "back"]
 
-    def execute(self, command, args=[]):
-        super().execute(command)
+    def _execute(self, command, args=[]):
+        super()._execute(command)
         if command == "back":
             self.close_pop_up()
-            self.execute("left")
+            self._execute("left")
             self.next_menu = MainMenu()
         elif command == "place":
-            self.execute("right")
+            self._execute("right")
         elif len(args) > 0:
             if command == "passenger":
                 GAME.click_input(coords=(150, 100))
@@ -376,7 +388,7 @@ class AdvertMenu(TwoButtonEventMenu):
                 GAME.click_input(coords=(200, 150 + button_num * 64))
             except ValueError:
                 pass
-            self.execute("right")
+            self._execute("right")
 
     def __str__(self):
         return "Advert Menu\nValid Commands:\npassenger <0-6>\ncommodity <0-6>\nplace\nback"
@@ -387,9 +399,9 @@ class ExploreMenu(BottomButtonMenu):
         super().__init__(6)
         self.commands = self.commands + ["special", "weather", "news"]
 
-    def execute(self, command, args=[]):
+    def _execute(self, command, args=[]):
 
-        super().execute(command, args)
+        super()._execute(command, args)
         if command == "special":
             self.click_button(1)
             if not self.close_pop_up():
@@ -397,11 +409,11 @@ class ExploreMenu(BottomButtonMenu):
         elif command == "weather":
             self.click_button(2)
             sleep(5)
-            TwoButtonEventMenu().execute("left")
+            TwoButtonEventMenu().run("left")
         elif command == "news":
             self.click_button(3)
             sleep(5)
-            TwoButtonEventMenu().execute("left")
+            TwoButtonEventMenu().run("left")
 
     def __str__(self):
         return "Explore Menu\nValid Commands:\nspecial\nweather\nnews"
@@ -424,13 +436,14 @@ class SpecialMenu(TwoButtonEventMenu):
         except:
             self.tilo = False
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if self.gambling:
             if command == "yes":
                 GAME.click_input(coords=(350, 420))
             elif command == "no":
                 GAME.click_input(coords=(430, 430))
+                self._execute("back")
 
             try:
                 locateOnScreen('ui_imgs/x.png')
@@ -438,19 +451,19 @@ class SpecialMenu(TwoButtonEventMenu):
                 sleep(1)
                 self.next_menu = ExploreMenu()
                 self.gambling = False
-                self.execute("left")
+                self._execute("left")
         else:
             if command == "back":
                 Menu.close_pop_up()
-                self.execute("left")
+                self._execute("left")
                 self.next_menu = ExploreMenu()
             elif command == "special":
-                self.execute("right")
+                self._execute("right")
                 sleep(4)
                 self.next_menu = ExploreMenu()
-                self.execute("left")
+                self._execute("left")
             elif len(args) > 0 and command == "gamble":
-                self.execute("right")
+                self._execute("right")
                 self.money_menu(args[0])
                 try:
                     locateOnScreen('ui_imgs/x.png')
@@ -461,7 +474,7 @@ class SpecialMenu(TwoButtonEventMenu):
                 except:
                     sleep(3)
                     self.next_menu = ExploreMenu()
-                    self.execute("left")
+                    self._execute("left")
 
     def money_menu(self, amount):
         if amount == "max" or amount == "all":
@@ -506,8 +519,8 @@ class TravelMenu(BottomButtonMenu):
             print(TravelMenu.PLANETS)
         self.commands = self.commands + ["distance", "facilities"] + TravelMenu.PLANETS
 
-    def execute(self, command, args=[]):
-        super().execute(command)
+    def _execute(self, command, args=[]):
+        super()._execute(command)
         if command == "distance":
             self.click_button(1)
             self.next_menu = FacilitiesMenu()
@@ -516,13 +529,13 @@ class TravelMenu(BottomButtonMenu):
             self.next_menu = FacilitiesMenu()
         elif command in TravelMenu.PLANETS:
             # Deposit our cash to gain interest.
-            self.execute("back")
+            self._execute("back")
             main = MainMenu()
             bank = BankMenu()
-            main.execute("bank")
-            bank.execute("deposit", ["max"])
-            bank.execute("back")
-            main.execute("journey")
+            main.run("bank")
+            bank.run("deposit max")
+            bank.run("back")
+            main.run("journey")
             # sleep to ensure the menu is actually open
             sleep(0.3)
             # now we're back on the travel menu, actually go to the planet
@@ -531,7 +544,7 @@ class TravelMenu(BottomButtonMenu):
             sleep(1)
             if not self.close_pop_up():
                 # TODO: this should be none for the main script to handle, but err, there is not main script.
-                self.next_menu = main
+                self.next_menu = None
 
     def __str__(self):
         return_string = "Travel Menu\nValid Commands:\ndistance\nfacilities"
@@ -545,8 +558,8 @@ class FacilitiesMenu(BottomButtonMenu):
         super().__init__(3)
         self.commands += ["planet", "distance", "facilities"]
 
-    def execute(self, command, args=[]):
-        super().execute(command)
+    def _execute(self, command, args=[]):
+        super()._execute(command)
         if command == "back":
             self.next_menu = TravelMenu()
         elif command == "distance":
@@ -632,8 +645,8 @@ class SupplyMenu(ShopMenu):
         self.commands.remove("supply")
         self.commands.append("mark")
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if command == "market" or command == "marketplace":
             self.click_button(1)
             self.next_menu = MarketMenu()
@@ -664,8 +677,8 @@ class MarketMenu(ShopMenu):
         super().__init__()
         self.commands = self.commands[2:] + ["buy", "sell"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if command == "supply":
             self.click_button(1)
             self.next_menu = SupplyMenu()
@@ -700,8 +713,8 @@ class WarehouseMenu(ShopMenu):
         self.commands.remove("warehouse")
         self.commands = self.commands + ["store", "take", "other"]
 
-    def execute(self, command, args=[]):
-        super().execute(command, args)
+    def _execute(self, command, args=[]):
+        super()._execute(command, args)
         if command == "supply":
             self.click_button(1)
             self.next_menu = SupplyMenu()
