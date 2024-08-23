@@ -1,7 +1,8 @@
 from pywinauto import Application, keyboard
 from pyautogui import locateOnScreen, ImageNotFoundException, click
-#from pydirectinput import click
+# from pydirectinput import click
 from time import time, sleep
+
 app = None
 while app is None:
     try:
@@ -48,11 +49,15 @@ class Menu:
         try:
             xbuttoncoords = locateOnScreen('ui_imgs/x.png')
             click(xbuttoncoords)
+            click(
+                xbuttoncoords)  # Sometimes the button doesn't get clicked even though the mouse moves so we click twice
             success = True
         except ImageNotFoundException:
             try:
                 xbuttoncoords = locateOnScreen('ui_imgs/inverted_x.png')
                 click(xbuttoncoords)
+                click(xbuttoncoords)
+                GAME.click_input()
                 success = True
             except ImageNotFoundException:
                 success = False
@@ -143,6 +148,11 @@ class MainMenu(Menu):
                         GAME.click_input(coords=(450, 530))
                         self.close_pop_up()
                         GAME.click_input(coords=(250, 530))
+                    elif args[0] == "zinn":
+                        GAME.click_input(coords=(200, 550))
+                        zinn = ZinnMenu()
+                        # if len(args) >
+
             case "buy":
                 if len(args) > 0:
                     if args[0] == "insurance":
@@ -741,3 +751,28 @@ class WarehouseMenu(ShopMenu):
     def __str__(self):
         return "Warehouse Menu\nValid Commands:\nsupply\nmarket/marketplace\nshow <available/cargo/all>\nstore " \
                "<resource> <amount/max>\ntake <resource> <amount/max>\nback"
+
+
+class EventMenu(Menu):
+    yesNo = False
+    def __init__(self):
+        super().__init__()
+        try:
+            locateOnScreen('ui_imgs/ok.png')
+            self.commands += ["ok"]
+        except:
+            try:
+                locateOnScreen('ui_imgs/yes.png')
+                self.commands += ["yes", "no"]
+                self.yesNo = True
+            except:
+                pass
+
+    def _execute(self, command, args=[]):
+        if command == "ok":
+            click(locateOnScreen('ui_imgs/ok.png'))
+        elif command == "yes":
+            click(locateOnScreen('ui_imgs/yes.png'))
+        elif command == "no":
+            click(locateOnScreen('ui_imgs/no.png'))
+

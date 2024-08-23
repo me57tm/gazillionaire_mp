@@ -1,12 +1,13 @@
 from player_controller import *
 
-#Start turn ship is not the same size as other menus, it's smaller. darn.
+player1 = PyConsolePlayer("AA")
+player2 = PyConsolePlayer("BB")
+player3 = PyConsolePlayer("CC")
+player4 = PyConsolePlayer("DD")
 
-player1 = HumanPlayer("AA", "")
-player2 = TwitchPlayer("BB")
-
+players = [player1,player2,player3,player4]
+#player1.menu = MainMenu()
+#player1.events()
 while True:
     print("player 1")
     player1.run()
-    print("player 2")
-    player2.run()

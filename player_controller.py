@@ -13,11 +13,15 @@ class Player:
         self.company_name = name
 
     def run(self):
-        # Run any commands needed for initial event menus, then call loop.
+        # Run any commands needed for initial turn information menus, then call loop.
         raise NotImplementedError("Setup must overriden by child class for menus before the main menu.")
 
     def loop(self):
-        raise NotImplementedError("Children must implement a loop loop.")
+        #Run commands required to activate the main menu and its submenus, ends when you fly to another planet.
+        raise NotImplementedError("Children must implement a main-menu loop.")
+
+    def events(self):
+        raise NotImplementedError("Children must implement an event chain")
 
 
 class HumanPlayer(Player):
@@ -27,9 +31,6 @@ class HumanPlayer(Player):
         self.hotkey = hotkey
 
     def run(self):
-        self.loop()
-
-    def loop(self):
         # wait until num0 is pressed:
         # TODO: allow this to be any key
         def on_press(key):
@@ -77,6 +78,18 @@ class PyConsolePlayer(Player):
     menu = None
 
     def run(self):
+        GAME.click_input(coords=(600, 560)) # Click "Start Turn"
+        alerts_complete = False
+        while not alerts_complete:
+            try:
+                GAME.click_input(coords=(30, 40))  # Move the mouse out the way of any buttons so they can be found
+                sleep(2)
+                ok = locateOnScreen('ui_imgs/ok.png')
+                click(ok)
+            except:
+                alerts_complete = True
+        GAME.click_input()
+        BottomButtonMenu(4).click_button(0)
         self.menu = MainMenu()
         self.loop()
 
@@ -84,6 +97,48 @@ class PyConsolePlayer(Player):
         while self.menu is not None:
             self.menu.run(input(">>>").lower())
             self.menu = self.menu.next_menu
+        self.events()
+
+    def events(self):
+        print("event time")
+        try:
+            #AUCTIONS ASK YOU "ARE YOU SURE" SOMETIMES
+            print("looking for an auction")
+            locateOnScreen('ui_imgs/auction.png')
+            GAME.click_input(coords=(600, 530))
+            i = ""
+            while not i.isdigit():
+                print("please enter auction amount")
+                i = input(">>>")
+                sleep(1)
+            print("bidding", i)
+            keyboard.send_keys(i)
+            keyboard.send_keys("{ENTER}")
+        except:
+            print("there is no auction")
+            pass
+        print("flying")
+        sleep(3)
+        print("flying complete")
+
+        myTurn = True
+        while myTurn:
+            GAME.click_input(coords=(30, 40))  # Move the mouse out the way of any buttons so they can be found
+            print("Checking next event popup")
+            e = EventMenu()
+            try:
+                locateOnScreen('ui_imgs/begin_turn.png')
+                myTurn = False
+                print("my turn ended")
+            except:
+                if e.yesNo:
+                    print("yes or no")
+                    e.run(input(">>>").lower())
+                else:
+                    print("automatically clicking ok")
+                    e.run("ok")
+            sleep(2)
+
 
 
 class MelonEnjoyer(Player):
@@ -92,7 +147,7 @@ class MelonEnjoyer(Player):
     passengerPrice = 0
     advertsSet = False
     phase = "buy"
-    holding = ["polyester", "kryptoons", "x fuels"]
+    holding = []
 
     def run(self):
         # sleep(10)
