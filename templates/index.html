@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gazillionaire UI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='update_page.js') }}"></script>
+</head>
+<body>
+<div id="sidebar">
+    <div class="whole-title">
+         <div class="title-content">
+             <div class="title-image-container">
+                 <img id="title-image" class="fit-image" src="static/title_images/jon.png">
+             </div>
+             <div id="title-text">
+                 Test's Turn
+             </div>
+         </div>
+    </div>
+    <div class="commands">
+        <p>Valid Commands:</p>
+    <ul id="command-list">
+        <li>cheese</li>
+        <li>gromit</li>
+    </ul>
+    </div>
+</div>
+</body>
+</html>

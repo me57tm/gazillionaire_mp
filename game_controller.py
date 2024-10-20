@@ -753,26 +753,28 @@ class WarehouseMenu(ShopMenu):
                "<resource> <amount/max>\ntake <resource> <amount/max>\nback"
 
 
-class EventMenu(Menu):
-    yesNo = False
+class AuctionMenu(Menu):
+
     def __init__(self):
         super().__init__()
-        try:
-            locateOnScreen('ui_imgs/ok.png')
-            self.commands += ["ok"]
-        except:
-            try:
-                locateOnScreen('ui_imgs/yes.png')
-                self.commands += ["yes", "no"]
-                self.yesNo = True
-            except:
-                pass
+        GAME.click_input(coords=(600, 530))  # Click OK to open the auction dialouge box
+
+    def run(self, command):
+        print(command,command.isdigit())
+        if command.isdigit():
+            print("bidding muhaha")
+            self._execute(command)
+        else:
+            super().run(command)
 
     def _execute(self, command, args=[]):
-        if command == "ok":
-            click(locateOnScreen('ui_imgs/ok.png'))
-        elif command == "yes":
-            click(locateOnScreen('ui_imgs/yes.png'))
-        elif command == "no":
-            click(locateOnScreen('ui_imgs/no.png'))
+        print("hi")
+        super()._execute(command)
+        print(command, command.isdigit())
+        if command.isdigit():
+            print("Ok now we're actually bidding")
+            GAME.click_input(coords=(300, 425)) # Click the text box
+            keyboard.send_keys(command)
+            keyboard.send_keys("{ENTER}") # Make Bid
+            GAME.click_input(coords=(350, 380)) # Click Yes in case the game thinks we're bidding too much
 
